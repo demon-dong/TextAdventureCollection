@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>灯影巷 · 消失的走马灯</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+
+        body{
+            background: #0d1117;
+            /* 暗底上铺一层极淡的水墨纹理感 */
+            background-image:
+                    radial-gradient(ellipse at 20% 80%, rgba(120,60,20,.12) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 20%, rgba(180,100,30,.08) 0%, transparent 50%);
+            color: #ddd8ce;
+            font-family: "Noto Serif SC","PingFang SC","Microsoft YaHei",serif;
+            min-height:100vh;
+            display:flex; justify-content:center; align-items:flex-start;
+            padding:20px 12px 60px;
+            -webkit-tap-highlight-color:transparent;
+        }
+        @media(max-width:440px){body{padding:10px 6px 48px;}}
+
+        #game{
+            width:100%; max-width:640px;
+            background: linear-gradient(175deg,#14100e 0%,#1a1410 50%,#110e0c 100%);
+            border:1px solid #2a2118;
+            border-radius:16px;
+            box-shadow:
+                    0 0 80px rgba(180,100,30,.06),
+                    inset 0 1px 0 rgba(255,200,120,.04);
+            overflow:hidden; position:relative;
+        }
+
+        /* ===== 顶部 ===== */
+        #header{
+            background:linear-gradient(90deg,#1c1610,#17120d);
+            border-bottom:1px solid #2a2118;
+            padding:13px 18px;
+            display:flex;align-items:center;gap:10px;
+        }
+        #header .lantern{
+            width:34px;height:34px;border-radius:10px;
+            background:radial-gradient(circle,#e8653a 0%,#9b2c14 70%,#5c1508 100%);
+            box-shadow:0 0 12px rgba(232,101,58,.35);
+            display:flex;align-items:center;justify-content:center;
+            font-size:18px;flex-shrink:0;
+            position:relative;
+        }
+        #header .lantern::after{
+            content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+            width:2px;height:6px;background:#5c3a1e;border-radius:0 0 1px 1px;
+        }
+        #header .title{font-size:15px;font-weight:700;color:#e8c87a;letter-spacing:1.5px;}
+        #header .sub{font-size:10.5px;color:#7a6850;margin-top:1px;letter-spacing:.5px;}
+
+        /* ===== 场景区 ===== */
+        #scene-area{padding:20px 18px 8px;min-height:200px;}
+        @media(max-width:440px){#scene-area{padding:16px 12px 6px;min-height:170px;}}
+
+        .scene-icon{font-size:42px;margin-bottom:8px;
+            filter:drop-shadow(0 0 14px rgba(232,160,60,.2));}
+
+        #scene-text{
+            font-size:15px;line-height:1.9;color:#c9bda0;
+            letter-spacing:.3px;white-space:pre-line;
+            min-height:50px;word-break:break-word;
+        }
+        #scene-text .cursor{
+            display:inline-block;width:7px;height:17px;
+            background:#d4a24e;margin-left:2px;
+            animation:blink .65s steps(1) infinite;vertical-align:text-bottom;
+        }
+        @keyframes blink{50%{opacity:0}}
+
+        .divider{border:none;border-top:1px solid #231e16;margin:12px 0 4px;}
+
+        /* ===== 选项 ===== */
+        #choices{padding:6px 18px 20px;display:flex;flex-direction:column;gap:9px;transition: opacity .25s ease;}
+        @media(max-width:440px){#choices{padding:6px 12px 18px;gap:8px;}}
+
+        .choice-btn{
+            display:block;width:100%;text-align:left;
+            background:linear-gradient(135deg,#1a1510 0%,#16120c 100%);
+            border:1px solid #2e2618;
+            border-radius:11px;padding:13px 16px;
+            color:#d8c8a8;font-size:14.5px;line-height:1.6;
+            font-family:inherit;cursor:pointer;
+            -webkit-tap-highlight-color:transparent;
+            position:relative;user-select:none;
+            transition:background .18s,border-color .18s,transform .16s,box-shadow .18s;
+        }
+        @media(max-width:440px){.choice-btn{padding:12px 13px;font-size:13.5px;border-radius:9px;}}
+        .choice-btn .badge{
+            display:inline-block;margin-right:6px;
+            color:#e8a040;font-size:13px;opacity:.7;
+        }
+        .choice-btn .arr{position:absolute;right:14px;top:50%;transform:translateY(-50%);opacity:.25;font-size:12px;color:#e8c050;}
+        .choice-btn.disabled {
+            opacity: 0.45;
+            pointer-events: none;
+        }
+
+        .choice-btn:active{transform:translateX(2px) scale(.975);
+            background:linear-gradient(135deg,#221c12,#1a1510);border-color:#a06828;}
+        @media(hover:hover)and(pointer:fine){
+            .choice-btn:hover{
+                background:linear-gradient(135deg,#221c12,#1a1510);
+                border-color:#c08030;color:#f0e4cc;
+                box-shadow:0 0 18px rgba(200,130,40,.08);transform:translateX(3px);
+            }
+            .choice-btn:active{transform:translateX(3px)scale(.975);}
+        }
+
+        /* ===== 状态栏 ===== */
+        #statusbar{
+            display:flex;gap:12px;flex-wrap:wrap;
+            padding:9px 18px 13px;
+            font-size:11px;color:#5c4e3a;
+            border-top:1px solid #1e1810;
+            background:rgba(0,0,0,.15);
+        }
+        @media(max-width:440px){#statusbar{padding:8px 12px 11px;gap:8px;font-size:10.5px;}}
+        #statusbar b{color:#c0a060;font-weight:600;}
+
+        /* 淡入动画 */
+        @keyframes fadeSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .shake{animation:shake .35s ease}
+        @keyframes shake{
+            0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)}
+            40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)}
+        }
+
+        /* 顶部的"章节标记" */
+        .chap-tag{
+            display:inline-block;
+            font-size:10px;letter-spacing:2px;color:#a06828;
+            border:1px solid #3a2a16;background:rgba(160,100,30,.06);
+            padding:2px 8px;border-radius:4px;margin-bottom:6px;
+            font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+        }
+
+        /* 道具获得闪金 */
+        .item-pop{
+            display:inline-block;
+            color:#f0d060;font-weight:700;
+            text-shadow:0 0 8px rgba(240,208,96,.4);
+        }
+    </style>
+</head>
+<body>
+
+<div id="game">
+    <!-- 顶栏 -->
+    <div id="header">
+        <div class="lantern">🏮</div>
+        <div>
+            <div class="title">灯影巷</div>
+            <div class="sub">· 消失的走马灯</div>
+        </div>
+    </div>
+
+    <!-- 场景 -->
+    <div id="scene-area">
+        <div class="scene-icon" id="scene-icon"></div>
+        <div id="scene-text"></div>
+    </div>
+    <hr class="divider">
+    <div id="choices"></div>
+
+    <!-- 状态 -->
+    <div id="statusbar">
+        <span>🕒 <b id="st-time">腊月廿七 傍晚</b></span>
+        <span>🎒 道具：<b id="st-inv">无</b></span>
+        <span>📖 线索 <b id="st-pages">0 / 6</b></span>
+        <a href="../index.html" style="color:#e8c87a;font-size:13px;opacity:.7;text-decoration:none">← 返回合集</a>
+    </div>
+</div>
+
+<script>
+    /* ==========================================================
+       ★ 状态
+       ========================================================== */
+    const state = {
+        inv: [],          // 道具
+        flags: {},        // 各种开关
+        pages: 0,         // 收集的册子页数/线索数 0-6
+        shenWarm: 0,      // 沈爷爷好感 0-3
+        timeLabel: '腊月廿七 傍晚',
+    };
+
+    function addInv(item){
+        if(!state.inv.includes(item)) state.inv.push(item);
+    }
+    function hasInv(item){ return state.inv.includes(item); }
+    function setFlag(k,v){ state.flags[k]=v; }
+    function getFlag(k){ return !!state.flags[k]; }
+
+    function updateStatus(){
+        document.getElementById('st-inv').textContent = state.inv.length ? state.inv.join('、') : '无';
+        document.getElementById('st-pages').textContent = state.pages + ' / 6';
+        document.getElementById('st-time').textContent = state.timeLabel;
+    }
+
+    /* ==========================================================
+       ★ 场景数据
+       id : { icon, text, choices:[{label,goto,action}] }
+       ========================================================== */
+    const SCENES = {};
+
+    function S(id, icon, text, choices){
+        SCENES[id] = { icon, text, choices };
+    }
+
+    /* ─────────────── 序章 ─────────────── */
+    S('start', '🏮',
+        `腊月廿七。枕水镇的冬天不冷，但风里有水腥味。
+
+你被爸妈"寄存"在外婆的豆腐坊已经第七天了——他们说"寒假最后一周，跟外婆待完啊"，然后小汽车嘟嘟开出青石板路，副驾飘落的那张纸角你隐约看到几个字：「灯巷片区 · 改造开发意向书」……
+
+外婆系着蓝印花布围裙，正拿大铜勺搅豆浆。蒸腾白雾把她脸烘得柔和。她像随口说：
+
+"灯巷那边别去啊。今年元宵不办灯会了。那帮老灯匠关了铺子窝着不出来，邪门得很。尤其沈老头那『沈记灯坊』——他门锁着，钥匙不给任何人。"
+
+她顿了顿，往巷子方向瞥一眼。
+
+"你要是碰见他……替我捎句：『豆浆还欠你一碗。』"
+
+她转身。你注意到：
+ ① 她腰侧抽屉里露出一角旧照片——一群人举走马灯站在石桥上
+ ② 窗台上扣着空芝麻糖纸。外婆不吃芝麻糖……
+ ③ 门外石板路"笃、笃"——佝偻老头拎竹篮走过，篮底漏出一线极淡的金红色光。`,
+
+        [
+            { label:'🔍 趁外婆搅豆浆，悄悄翻抽屉看那张照片', goto:'start_peek' },
+            { label:'🍬 抓俩芝麻糖揣兜，直接溜出门往灯巷走',    goto:'lamp_alley' },
+            { label:'🥛 先帮外婆滤豆渣、擦碗——她高兴了也许多说点',goto:'start_help' },
+            { label:'🏃 追出去看那个老头（沈爷爷？）',             goto:'lamp_alley_chase' },
+        ]);
+
+    /* ——— 翻抽屉 ——— */
+    S('start_peek','📸',
+        `你踮脚拉开抽屉——
+
+外婆的围裙"啪"一声盖住半边台面。她没生气，只是叹了口气，把托盘搁下来。
+
+"跟你妈一模一样。她也翻我抽屉。"
+
+她自己把照片抽出来——泛黄的四寸照，一群穿棉袄的人站在拱桥上，最高那盏灯画着一条绕云龙，鳞片是一层层染色绢纸贴出来的。
+
+"这灯叫『吞云』。你外公帮沈老头他爹画的灯面。"她拇指蹭桥面。
+"后来……灯谱丢了。册子不见了。沈老头说灯骨还在，可没图样，灯魂就回不来。"
+
+她从灶台砖缝抠出一把小铜钥匙，搁你手心：
+
+"灯坊后院柴棚。他藏了半辈子不用的旧工具。你去看看——别说我从哪拿的钥匙。"
+
+> 🎒 获得：【柴棚小铜钥匙】
+> 🎒 获得：【外婆的默许】（沈爷爷认这个名字）
+
+外婆用勺敲你脑门："看完了？去吧。天黑前回来吃豆腐圆子。"`,
+        [
+            { label:'✊ 攥紧钥匙，出门往灯巷走', goto:'lamp_alley', action:()=>{
+                    addInv('柴棚小铜钥匙'); setFlag('grandmaOk',true);
+                }},
+        ]);
+
+    /* ——— 帮干活 ——— */
+    S('start_help','🥢',
+        `你老老实实干了半小时：滤豆渣、浇卤、擦碗、给熟客装袋。
+
+外婆最后把最后一勺红糖豆浆倒你碗里：
+
+"行吧。比那帮穿西装的『规划师』勤劳。"
+"跟你说实话：灯巷不是邪——是有人偷了东西。
+  沈老头那本蓝布封册子——灯面画稿、竹篾尺寸、颜料配方——一夜没了。
+  他不说，但我知道：那贼坐船从后窗河面摸进去的。"
+
+"你要闲得慌……帮我把一包豆腐干送去枕河居，给茶阿婆。
+  她嘴碎，但碎的都是有用的。"
+
+> 🎒 获得：【送给茶阿婆的豆腐干】
+> 💡 情报：蓝布册子丢了，从河面后窗进的`,
+        [
+            { label:'📦 拎豆腐干先去茶馆摸情报', goto:'teahouse_entry', action:()=>{
+                    addInv('送给茶阿婆的豆腐干'); setFlag('knowBookMissing',true);
+                }},
+            { label:'🏮 先拐去灯巷看沈记灯坊', goto:'lamp_alley' },
+        ]);
+
+    /* ——— 直接出门/追沈爷爷 ——— */
+    S('lamp_alley_chase','👴',
+        `你追出去——石板路拐角空了。只有竹篮落下的几根细篾片。
+
+篮底那缕金红……走近才发现是<strong>一小片染色绢纸</strong>，松烟墨画的龙鳞局部。你捡起来，揣兜。
+
+再往前走，灯巷到了。`,
+        [
+            { label:'🏮 走进灯巷找沈记灯坊', goto:'lamp_alley', action:()=>addInv('龙鳞绢片') },
+        ]);
+    S('lamp_alley','🏮',
+        `灯巷比外婆说的还安静。七家灯铺：朱漆木门全钉了木板。只有最尽头——
+
+<strong>「沈记灯坊」</strong>
+
+门板没钉死，但一把拳头大的老铜锁挂着，锁上缠了圈褪色红绳。门缝渗出的不是霉味——是<strong>竹篾烤焦香</strong>和<strong>松烟墨</strong>。
+
+你蹲下看锁眼——
+
+"看什么呢。"
+
+抬头。沈爷爷不知何时站台阶上，竹篮搁一边。他眼睛像泡了几百年水的河卵石。不凶，就是……很深。
+
+"你外婆的豆浆我喝过了。"他把篮放下，"她人呢？"
+
+> 选怎么说——`,
+        [
+            { label:'💬 "我就是来看看灯！外婆说今年不办灯会了，为啥？"', goto:'shen_cold' },
+            { label:'🍬 掏芝麻糖递过去："外婆说欠您一碗豆腐脑。这个抵行不？"', goto:'shen_warm' },
+            { label:'🙂 不说话，伸手轻轻碰一下那根缠锁的红绳', goto:'shen_string' },
+        ]);
+
+    /* ——— 沈爷爷分支 ——— */
+    S('shen_cold','🧓',
+        `沈爷爷哼一声，手指摩挲铜锁：
+
+"灯都没了，办什么灯会。"
+
+他拎起篮要走——
+
+"……你要逛也行。别碰二楼楼梯口那块活板。底下养东西。"
+
+（他没说"不许进"，只是"别碰"。这算……默许？）
+
+你看看左右——灯巷往回走是豆腐坊方向，往前走到底通河边台阶，右手有条窄缝夹道通后院柴棚。`,
+        [
+            { label:'🔙 先去枕河居茶馆（路过外婆那顺路拿豆腐干也行）', goto:'teahouse_entry' },
+            { label:'🚪 试试后院夹道→柴棚（有钥匙吗？）', goto:'backyard', action:()=>setFlag('shenColdMet',true) },
+        ]);
+
+    S('shen_warm','🍬',
+        `沈爷爷低头看你掌心那颗芝麻糖。停两秒——接过去，剥开，咬半口。
+
+嚼的时候眉心那道竖纹松了一毫米。
+
+"……糖还行。"他把糖纸折好塞进自己袖袋，"进来。只准在楼下。"
+
+铜锁喀嗒——他开门。门轴呻吟像老猫伸懒腰。
+
+灯坊一楼像个<strong>竹骨动物园</strong>：半成品灯架靠墙立着，最大那个空圆台积灰——旁边矮凳上摊着刀、尺、鱼鳔胶罐、一束发黄的苏州绢。
+
+"柴棚在后院。你外婆给你钥匙了？"
+
+> 🤝 沈爷爷态度：【松动】（好感+1）`,
+        [
+            { label:'🚪 进一楼随便看看（可调查物件）', goto:'workshop_ground', action:()=>{ state.shenWarm=1; addInv('沈爷爷的默许'); }},
+            { label:'🏃 后院柴棚先（如果有钥匙）', goto:'backyard' },
+            { label:'🍵 先去茶馆送豆腐干，回来再仔细搜', goto:'teahouse_entry' },
+        ]);
+
+    S('shen_string','🔴',
+        `指尖刚碰到红绳——
+
+"！"沈爷爷猛地拍你手腕。力气大得惊人。
+
+不是真疼。但红绳上那根细铜丝震了一下……绳结里嵌着一粒<strong>淡蓝色碎晶</strong>，像呼吸般明灭一次。
+
+他看你掌心（没有伤，但你的体温让碎晶光更亮了），表情变了：
+
+"……你手上有茧。谁教你编竹的？"
+
+"……先不编。你叫什么。"
+
+> 💡 【神秘值+1】——碎晶记住你了。`,
+        [
+            { label:'🏮 趁他愣神，问能不能进灯坊', goto:'workshop_ground', action:()=>{
+                    state.shenWarm=1; setFlag('stringTouched',true); addInv('碎晶（淡蓝）');
+                }},
+            { label:'🚶 退一步，先去茶馆打听', goto:'teahouse_entry' },
+        ]);
+
+    /* ——— 灯坊一楼可调查 ——— */
+    S('workshop_ground','🛠️',
+        `灯坊一楼光线像蜂蜜——夕阳从窄高窗斜切进来。
+
+你可以调查：
+
+  📦 <strong>矮凳工作台</strong>：刀尺胶罐，鱼鳔胶罐底结了一层琥珀色硬壳。旁边一叠作废灯屏草稿，背面用炭笔写了些数字……像尺寸验算。
+  🪣 <strong>角落水缸</strong>：水面沉着几片金箔碎屑。
+  🚪 <strong>后门（通柴棚）</strong>：木闩插着。要是你有外婆的钥匙……
+
+沈爷爷在里间敲什么，没管你。`,
+        [
+            { label:'📏 翻草稿纸——背面数字像灯骨尺寸！抄下来', goto:'found_notes', action:()=>{
+                    addInv('灯骨尺寸草稿'); state.pages+=1;
+                }},
+            { label:'🚪 开后门去柴棚（需要柴棚钥匙）', goto: getFlag('grandmaOk')||hasInv('柴棚小铜钥匙') ? 'backyard' : 'backyard_locked' },
+            { label:'🍵 去茶馆找茶阿婆', goto:'teahouse_entry' },
+        ]);
+
+    S('found_notes','📏',
+        `你小心揭那张草稿纸——背面确实是灯骨编法：六方柱体，每棱竹篾粗细、弧度、搭接角度写得像工程图。
+
+翻过来正面，炭笔画了一条龙尾——只画到一半就停了。纸角印着褪色蓝布纤维：<strong>这说明它就是从那本蓝布册子上撕下来的页！</strong>
+
+你听见里间沈爷爷的脚步——赶紧把纸折好塞内袋。
+
+> 📖 线索 +1（灯骨尺寸草稿）
+> 🎒 获得：【灯骨尺寸草稿】`,
+        [
+            { label:'🍵 好，现在真的该去茶馆了', goto:'teahouse_entry' },
+            { label:'🚪 后院柴棚', goto:'backyard' },
+        ]);
+
+    /* ——— 后院柴棚 ——— */
+    S('backyard_locked','🔒',
+        `门闩插着。铜锁扣着。你掏掏兜——没有钥匙。
+
+从木板缝往里看：昏暗中堆着旧竹篾捆、一截铁炉烟囱、翻过来的木桶……和一个<strong>半遮的蓝布角</strong>。
+
+沈爷爷声音从背后来：
+
+"钥匙在你外婆那。"
+
+> 看来得先搞定外婆的关系线。`,
+        [
+            { label:'🍵 行，先去茶馆', goto:'teahouse_entry' },
+            { label:'🏮 回去再磨沈爷爷开门', goto:'lamp_alley' },
+        ]);
+
+    S('backyard','🌿',
+        `后院窄得像舌头。青苔石板、竹篱、一口枯井盖着石板。柴棚歪歪的，但铜锁开了——外婆的钥匙。
+
+里面一股陈竹和干燥泥土味。你慢慢看清：
+
+  📦 旧工具箱（刻竹刀/小锯/鱼鳔胶罐/一盒骨针）
+  🪶 一捆<strong>苏州绢</strong>（比灯坊那捆更完整，边缘盖着蓝布印子）
+  📜 墙缝塞着一小卷油纸——抽出来展开：
+
+> 『……吞云灯面配方：
+>  矿粉金/朱砂/蛤粉 → 调鱼胶 → 七层绢
+>   每层晾两个时辰，不可贪快。
+>   灯芯：蜂蜡六成、松脂四成、一撮金粉碎屑
+>   ——沈鸿声 戊辰冬』
+
+> 🎒 获得：【旧工具箱】【苏州绢】
+> 📖 线索 +2（配方页）
+
+沈爷爷不知何时堵在后门框上，看你手里的纸卷，喉动了动。没抢回去。只说：
+
+"……明天要是还敢来，二楼暗梯我给你留着。"`,
+        [
+            { label:'🍵 满意了，去茶馆！', goto:'teahouse_entry', action:()=>{
+                    addInv('旧工具箱'); addInv('苏州绢'); addInv('配方页');
+                    state.pages += 2; state.shenWarm = Math.max(state.shenWarm,1);
+                }},
+        ]);
+
+    /* =========================================================
+       第二章 · 枕河居茶馆
+       ========================================================= */
+    S('teahouse_entry','🍵',
+        `河边风一吹，茶香先到。
+
+「枕河居」——吊竹帘的老茶馆，临河面全敞开。十几张八仙桌坐满老头老太，盖碗叮当。空气里混着熏豆、陈皮、陈普洱的味道——像一间屋子攒了一百年的呼吸。
+
+柜台后茶阿婆擦杯子，瞥你：
+
+"豆腐坊小鬼？你外婆的豆腐干呢——搁那。自己找个座，熏豆茶。"（不问你喝不喝就搁了一碗深琥珀色在面前）
+
+你从兜里掏——
+
+` + (hasInv('送给茶阿婆的豆腐干')
+            ? `> 🎒 豆腐干放上柜台。阿婆哼一声，推过来一碟腌桔皮当回礼。\n> 🎒 获得：【腌桔皮】（……这干嘛用？）\n> 阿婆态度明显松了。`
+            : `> ……你没带豆腐干。阿婆眉毛挑了一下，但没赶你。\n> "省了。那你帮我擦那摞盖碗，当我情报费。"`)
+        + `\n\n你要怎么开口？`,
+
+        hasInv('送给茶阿婆的豆腐干')
+            ? [
+                {label:'🔎 "阿婆，听说灯巷丢了一本蓝布册子？"', goto:'tea_ask'},
+                {label:'👂 不急着问，先喝熏豆茶慢慢听——靠窗那桌几个老头压低声音……', goto:'tea_eavesdrop'},
+                {label:'🐕 脚边有只半野土狗（右耳缺一块）蹭你——它嘴里叼着蓝布碎片？', goto:'tea_puppy'},
+            ]
+            : [
+                {label:'🔎 擦碗时随口问："灯巷册子真丢了？"', goto:'tea_ask'},
+                {label:'👂 边擦边偷听窗桌老头们的碎嘴', goto:'tea_eavesdrop'},
+                {label:'🐕 那只土狗叼你裤脚往外拽——去看？', goto:'tea_puppy'},
+            ]
+    );
+
+    S('tea_ask','👵',
+        `阿婆把杯子翻过来擦底，声音压低：
+
+"册子。蓝布封，封皮绣『沈』字角。三天前没的。当晚沈老头听见后窗有桨声——从河面走。瘦高个穿皮夹克，说什『文旅公司』，来拍照。拍个鬼。他搁竿子的功夫顺了册子。"
+
+她用擦布角指河方向：
+
+"那帮人租了<strong>水闸旁旧仓库</strong>当临时『办公室』。你要在意——往码头走，翠婶的乌篷船还在卸货，她认得你外婆。"
+
+> 💡 线索解锁：【水闸旧仓库】【码头·翠婶】
+> 📖 情报 +1`,
+        [
+            {label:'🚤 去码头找翠婶要水路', goto:'dock', action:()=>{setFlag('knowWarehouse',true);state.pages+=1;}},
+            {label:'🌙 天快黑了，先回灯巷看沈爷爷怎么说', goto:'lamp_alley_night'},
+        ]);
+
+    S('tea_eavesdrop','👂',
+        `你端熏豆茶坐斜对角。老头们以为你是小孩听不懂，声音越来越放：
+
+"……瘦高个叫贾六，钱总手下。合同不是收购——是『强制租赁空白签』。"
+"他白天搬LED塑料灯笼进去，晚上从仓库往面包车运东西——木箱那种。"
+"祠堂后山墙有个旧砖龛，听说沈老头藏了半本册子在里头……"
+
+最老那位（假眼）嗤一声："砖龛？那叫『灯灵龛』。沈鸿声当年亲手封的。"他把假眼转你方向——
+
+"小鬼。你外婆知道你来这。回去告诉她：『假眼老周问她豆浆还欠不欠』。"
+
+> 💡 解锁：【祠堂·后山门（夜）】【水闸旧仓库】
+> 📖 线索 +1`,
+        [
+            {label:'🚤 先去码头找翠婶', goto:'dock', action:()=>{setFlag('knowWarehouse',true);state.pages+=1;}},
+            {label:'🌙 天擦黑——去祠堂后山门看看砖龛', goto:'shrine_night'},
+        ]);
+
+    S('tea_puppy','🐕',
+        `那只土狗——小黄——叼你裤脚的力不小。你跟着它绕过茶馆后粪池（别问），穿过一排洗衣石板，到河埠头石缝。
+
+它松开嘴——你捡起来：
+
+<strong>一小片蓝布。角上绣着一个字：「沈」。</strong>
+
+旁边石缝还卡着一根细丝线——苏州绢专用的那种绞丝。顺着方向看——河面浮着极淡的油彩虹，往<strong>水闸方向</strong>漂。
+
+小黄呜一声，尾巴甩你手，然后叼你衣角往码头拽。
+
+> 🎒 获得：【蓝布碎片（沈）】
+> 💡 追踪线开启 → 码头/仓库`,
+        [
+            {label:'🚤 跟小黄上翠婶的船', goto:'dock', action:()=>{
+                    addInv('蓝布碎片（沈）'); setFlag('puppyFollow',true); state.pages+=1;
+                }},
+        ]);
+
+    /* =========================================================
+       第三章 · 探索区（码头 / 祠堂 / 仓库）
+       ========================================================= */
+
+    /* ——— 码头·翠婶 ——— */
+    S('dock','🚤',
+        `乌篷船"欸乃"一声靠岸。翠婶一看到你（或小黄）就笑了：
+
+"哟，豆腐坊仔！帮婶把这捆竹篾搬到棚——手别被刺扎了。"
+
+你帮她搬完。她看你手上有编篾的薄茧（沈爷爷捏过的那次），眼神变了：
+
+"……你也会编？行啊。上不上船？我得去水闸送批货。不过——"
+她压低声音，"仓库周围多了人。皮夹克小子雇了两个混混守。你别乱下船乱摸。"
+
+她在船板上铺了块麻袋让你坐。橹一摇，河水在暮色里拉出长长的金。
+
+船过灯巷后窗那段——翠婶突然把橹收一瞬，指水面：
+
+"看。油虹。绢染料。从仓库那边漂过来。"
+
+> ✅ 水路通行解锁`,
+        [
+            {label:'🌊 到水闸了，岸上旧仓库铁门半锈——趁翠婶卸货时溜过去', goto:'warehouse_outside'},
+            {label:'🏮 天黑了先回灯巷，把今天的收获告诉沈爷爷', goto:'lamp_alley_night'},
+        ]);
+
+    /* ——— 祠堂夜 ——— */
+    S('shrine_night','🌙',
+        `老祠堂门虚掩。月光像冷铁水。
+
+小时候外婆说"供的不兴小孩进"——但今夜门缝漏出光：不是烛，是那种<strong>旋动的淡金微光</strong>。
+
+你侧身挤进去。供桌后壁画（褪色三国彩绘）右下角，一块砖松动。砖后小龛——
+
+<strong>半本蓝布册子。</strong>
+
+封面银粉褪色字：
+  『吞云灯谱·卷下』
+  「灯骨编法 / 烛台配重 / 河灯阵位」
+
+但卷上（灯面画稿/颜料配方）不在。
+
+身后——
+
+"……你手又痒了。"
+
+沈爷爷。月光逆着，看不清表情。但他没抢册子。
+
+"卷下我藏三十年了。那贼搜阁楼搜不走。"他顿。
+"你要么把那卷上找回来……要么明天别来了。"
+
+> 🎒 获得：【吞云灯谱·卷下】
+> 📖 线索 +2
+> ❗ 沈爷爷正式：【不情愿收你当帮手】`,
+        [
+            {label:'🔥 有了卷下，你现在底气足了——去仓库抢回卷上！', goto:'warehouse_outside', action:()=>{
+                    addInv('吞云灯谱·卷下'); state.pages+=2; state.shenWarm=2;
+                }},
+        ]);
+
+    /* ——— 灯巷入夜（过渡） ——— */
+    S('lamp_alley_night','🌆',
+        `天擦黑后灯巷更静了。纸灯笼没挂，但有几户窗纸透出暖黄。
+
+沈爷爷在灯坊门口挂一盏小油灯——不是为了亮，是"给巷子留个魂"。
+
+你把所有收集到的东西给他过目。他翻卷下（如果有了）/看蓝布碎片/摸你带回的绢——
+
+"……贾六是吧。"他手指在铜锁红绳上绕一圈。
+"今晚就去。仓库钥匙扣我认得——他挂腰上，皮夹克内袋鼓着。"
+
+他把一样东西塞你手里：
+
+<strong>一盏小旧铜灯盏</strong>（空的），底刻「沈鸿声制」。
+
+"灯灵不认贼。认这个。"
+
+> 🎒 获得：【沈鸿声旧灯盏】`,
+        [
+            {label:'🚤 连夜走水路去仓库（翠婶船）', goto:'warehouse_outside', action:()=>addInv('沈鸿声旧灯盏')},
+            {label:'🏃 沿岸边青石小径摸过去（更隐蔽）', goto:'warehouse_outside'},
+        ]);
+
+    /* =========================================================
+       仓库 · 核心对决
+       ========================================================= */
+    S('warehouse_outside','📦',
+        `旧仓库铁门半锈，一盏廉价LED灯挂在门框当"欢迎"。里面堆——
+
+瓷砖样品箱。塑料仿古灯笼（印"网红打卡·枕水镇"）。折叠脚手架。
+
+但角落毡布底下，你摸到了——
+
+  ✅ <strong>蓝布封册子·卷上！</strong>（灯面画稿/颜料配方/矿粉配比）
+  ✅ <strong>沈爷爷的刻竹刀+鱼鳔胶罐</strong>（贼当成"旧垃圾"堆这）
+  ⚠️  <strong>一摞文件</strong>：《灯巷片区房屋租赁协议（空白签名页）》——这就是钱总伪造手续的证据
+
+> 📖 卷上回收！线索 +2
+
+突然——
+
+"嘿。小朋友。大半夜翻别人仓库，你家长知不知道？"
+
+瘦高个<strong>贾六</strong>堵在门口。皮夹克敞着，两手插袋。身后巷子有两个影子晃——同伙。
+
+他笑。不好看的笑。
+
+"把册子放下。册子我老板买了，合法走程序。你拿的是『公司财产』——"
+
+小黄从通风口钻出来，"汪！"一声，贾六脚踝一疼——他踢过去，小黄灵巧闪开。
+
+> 怎么办？！`,
+        [
+            {label:'💧 抓起鱼鳔胶罐砸地！黏糊溅他一鞋，趁他骂着擦——从侧货堆攀爬跳窗溜走', goto:'warehouse_escape_glue', action:()=>{addInv('吞云灯谱·卷上');addInv('刻竹刀+胶');addInv('证据文件');state.pages+=2;}},
+            {label:'📱 举起手机（没信号）对准他："我录到了！灯谱是非遗备案的！"——虚张声势', goto:'warehouse_escape_bluff', action:()=>{addInv('吞云灯谱·卷上');state.pages+=1;}},
+            {label:'🐕 不理他——小黄叼住文件袋边角拖向水道口！翠婶船刚好经过——', goto:'warehouse_escape_puppy', action:()=>{addInv('吞云灯谱·卷上');addInv('证据文件');state.pages+=2;}},
+            {label:'😤 ……交出去算了（差评线启动）', goto:'warehouse_fail'},
+        ]);
+
+    S('warehouse_escape_glue','💧',
+        `胶罐"啪！"碎在地上——半凝固的鱼鳔胶拉丝黏得一地。贾六鞋底"嘎吱"一声粘死。
+
+"我——靠！这什么鬼——"
+
+你趁他抬脚失衡，从侧面帆布堆翻过去，侧窗玻璃早破了个狗洞——你刚好能挤出去！
+
+小黄先钻，你在碎玻璃边蹭了道长口子（袖口撕破，但没大事），滚落到水道淤泥里。
+
+贾六骂骂咧咧到门口——但翠婶的船正好"欸乃"着过来，她瞥一眼你狼狈样，把你拉上船用麻袋裹住：
+
+"行了行了。豆腐坊交不出人要我赔的啊。"
+
+> 🎉 逃脱成功！卷上+工具+证据全到手！
+> 📖 线索满载 → 解锁终章`,
+        [
+            {label:'🏮 连夜回灯坊——把东西拍沈爷爷面前', goto:'finale_ready'}
+        ]);
+
+    S('warehouse_escape_bluff','📱',
+        `"——非遗备案的！"你声音比自己预想稳。
+
+贾六笑僵了一秒。他真不懂法，但"非遗"这词他听过——老板说过"别惹文化局"。
+
+他抬手："行行行小鬼，录啊。录完自己出去别挡道。"
+
+他侧身让你"走"——但你注意到他<strong>把皮夹克扣子扣紧了</strong>（册子在他内袋）。你没抢回来，但——
+
+<strong>证据文件你偷偷塞进了自己后腰的腰带里。</strong>
+
+他让你走。但册子还在他手里。
+
+> ⚠️ 册子没拿全……但你有证据文件
+> 📖 线索 +1（不完全收集）`,
+        [
+            {label:'🏮 回去找沈爷爷商量对策', goto:'finale_partial'}
+        ]);
+
+    S('warehouse_escape_puppy','🐕',
+        `小黄不是"叼着玩"——它精准咬住文件袋帆布把手，拖、拉、拽，像训练过。
+
+文件袋"哗啦"滑进水道口——贾六扑过去——
+
+翠婶的船刚好到。"上来！"她伸手捞你和小黄，长橹一撑，船身荡开两米。
+
+贾六站在岸边，鞋沾泥，骂声被水流吞了。
+
+翠婶低头看你——你怀里紧抱着蓝布封册子卷上，边角皱了点但<strong>完整</strong>。
+
+> 🎉 册子夺回！证据也在翠婶船舱里。
+> 📖 线索满载 → 解锁终章`,
+        [
+            {label:'🏮 回灯坊——今晚就把灯拼起来', goto:'finale_ready'}
+        ]);
+
+    S('warehouse_fail','😤',
+        `你把蓝布封册子放回毡布上。
+
+贾六收好，居然没为难你——只说"懂事"。塞你一颗糖（包装印着"文旅集团"logo你没拆）。
+
+你出来时小黄在巷口等你，鼻尖拱你手心。
+
+袖口那片碎晶还在亮——但它<strong>比之前暗了</strong>。
+
+> 💔 册子没拿回来。但你还留着碎晶……还有外婆的豆腐坊。
+> 也许……明年？`,
+        [
+            {label:'🏠 先回去。但路过祠堂时偷偷把碎晶放回砖龛（让它等）', goto:'ending_bad'}
+        ]);
+
+    /* =========================================================
+       第四章 · 灯坊二楼 · 造灯
+       ========================================================= */
+    S('finale_ready','🏮',
+        `沈爷爷把铜锁红绳解开那一刻，二楼暗梯像一张老嘴缓缓张开。
+
+"灯不是木头架子。"他走在前面，脚步声像旧鼓点，
+"是让人回来认路的光。"
+
+二楼暗阁像个被时间遗忘的巢。三面墙全是半成品灯骨——
+最小如茶盏，最大那个空圆台，积着厚灰，像在等谁。
+
+他把你带回来的东西一一摊开：
+  • 卷上（灯面画稿）
+  • 卷下（灯骨编法）
+  • 配方页
+  • 苏州绢
+  • 刻竹刀与鱼鳔胶
+
+"吞云灯……七层绢，每层薄得像蝉翼。"
+他手指抚过空圆台的边缘，那上面有一圈旧刻痕——「戊辰年·沈鸿声制」。
+
+"你手上有茧。画工也有。"他抬头看你，
+"这盏灯，我一个人做不完。你选——你负责哪一块？"
+
+> 💡 提示：不同选择会影响灯的品质，进而影响结局。`,
+        [
+            { label:'🖌️ 画龙须（最精细活）', goto:'craft_draw', action:()=>setFlag('craftQuality','perfect') },
+            { label:'🔨 编灯骨竹架（需要力气）', goto:'craft_frame', action:()=>setFlag('craftQuality','good') },
+            { label:'🕯️ 调烛台配重（化学/细心）', goto:'craft_wick', action:()=>setFlag('craftQuality','normal') },
+            { label:'😤 我全都要帮忙（莽夫模式）', goto:'craft_all', action:()=>setFlag('craftQuality','rough') },
+        ]);
+
+    /* ——— 造灯分支 ——— */
+    S('craft_draw','🖌️',
+        `你接过那支旧狼毫笔。沈爷爷调了颜料——矿粉金、朱砂、蛤粉，兑入温鱼胶。
+
+第一笔落在第一层绢上。
+龙的眼睛。
+
+你手腕极稳（也许是碎晶在发烫）。线条细得像蛛丝，但有力。沈爷爷站在你侧后方，呼吸放得很轻。
+
+"……你外公当年画龙头，也是这样下笔。"
+他声音有点哑，"他总说，灯活了，是因为画的人把魂分了一缕给它。"
+
+七层绢。一层层贴。
+每一层干透，龙纹便深一分。
+到最后一层，你把那粒<strong>淡蓝碎晶</strong>轻轻按进龙额正中——
+
+"叮。"
+
+那一瞬间，整盏灯仿佛吸了一口气。
+
+> 🏆 造灯评价：【神品 · 吞云归位】`,
+        [
+            { label:'🏮 元宵夜到了，去桥头点灯！', goto:'festival_start' }
+        ]);
+
+    S('craft_frame','🔨',
+        `你负责劈篾、烤弯、编扎。
+
+竹篾在火上烤得微焦，散出香味。沈爷爷握着你的手腕教力道："过则断，不及则软。"
+
+灯骨渐渐成型——六方柱体，棱角分明。
+你在编到龙爪位置时，摸到一根旧竹骨，上面刻着「沈鸿声」。
+
+"那是我爹。"沈爷爷没看你，"他编的骨，我画的皮。现在你来了。"
+
+他把最后一根横撑递给你。你卡进去的那一刻，灯架发出一声极轻的"铮"——像古琴定弦。
+
+> 🏆 造灯评价：【良品 · 骨架坚实】`,
+        [
+            { label:'🏮 元宵夜，该亮灯了', goto:'festival_start' }
+        ]);
+
+    S('craft_wick','🕯️',
+        `调烛台是个精细活。蜂蜡六成，松脂四成，还要加一撮东西。
+
+"金粉碎屑。"沈爷爷从一个小陶罐里倒出一点，"光绪年剩下的。我舍不得用。"
+
+你小心翼翼混合。小黄蹲在旁边看，尾巴扫起一阵风，差点把金粉吹飞——你用手一捂，指缝漏下的金粉落在蜡液里，炸开细小的金星。
+
+沈爷爷没骂你。他看着那团金光，眼睛有些湿。
+
+"就是这个色。"他低声，"吞云的火，就该是这个色。"
+
+灯芯插好，配重调试完毕。灯座平稳如磐石。
+
+> 🏆 造灯评价：【中品 · 光华内敛】`,
+        [
+            { label:'🏮 去桥头', goto:'festival_start' }
+        ]);
+
+    S('craft_all','😤',
+        `你一会儿递刀，一会儿扶架子，一会儿又把颜料打翻了半罐。
+
+沈爷爷嘴上嫌弃："败家小子！""手别抖！""那是金粉不是盐！"
+但灯还是在你们俩手忙脚乱中拼起来了。
+
+歪了一点。龙须画得像两条胖蚯蚓。
+沈爷爷最后把灯提起来，左右看了看，叹气：
+
+"……丑是丑了点。但灯嘛，亮就行。老百姓不看画工，看的是个亮儿。"
+
+他把灯挂上钩子，转了转——虽然歪，但转得很欢快。
+
+> 🏆 造灯评价：【糙品 · 心意到了】`,
+        [
+            { label:'🏮 丑就丑吧，亮了再说！', goto:'festival_start' }
+        ]);
+
+    /* =========================================================
+       第五章 · 元宵夜 · 终章判定
+       ========================================================= */
+    S('festival_start','🏮',
+        `戌时。镇口河面起了雾，但雾里有鼓声。
+
+按规矩：七盏子灯沿河岸摆成北斗形。母灯「吞云」挂在中拱桥最高处。
+灯面龙纹转起来时，光影投在水面上 = 灯阵成 = 古镇这一年平安。
+
+沈爷爷把那把缠红绳的铜锁放在你手心：
+
+"锁不是锁灯。是锁给等的人开的。去。"
+
+你爬上桥。
+
+远处灯巷尽头，茶阿婆已经领着人把六盏子灯摆好了。
+但桥下——
+贾六又出现了。这次<strong>没跟班</strong>。他一个人，缩着脖子，手里捏着手机。
+
+钱总在电话里吼什么听不清，但贾六的脸……是怂的。
+
+他看你把灯往钩上挂。
+
+"……我那俩兄弟跑了。钱总说不算数不算数。
+ 我就是把册子挪个地儿……你们真要弄这个灯阵啊？"
+
+小黄从桥栏跳下来，围着他脚转圈，尾巴摇得像螺旋桨。
+
+贾六低头被狗蹭裤腿，突然觉得……挺傻的。
+
+他把手伸进夹克内袋——掏出来的不是合同，也不是册子。
+
+是一张折好的纸。他扔过来。
+
+你展开——不是钱。是一张<strong>老照片的复印件</strong>：年轻的沈爷爷、你外公、外婆，还有个穿中山装的男人站在灯阵前。
+
+背面钢笔字：
+
+  『灯不是用来拆的。是留给回来的人的。』
+
+> 🎒 获得：【老照片复印件】
+> 💡 所有线索集齐。
+
+你要……？`,
+        [
+            { label:'🔥 点燃灯芯！', goto:'ending_judge' }
+        ]);
+
+    S('ending_judge','✨',
+        `你按下打火机。
+
+火苗靠近灯芯——
+
+那一瞬间，时间好像被拉长了。
+
+（正在结算结局……）`,
+        [
+            { label:'……', goto:'ending_perfect', condition:()=>getFlag('craftQuality')==='perfect' && state.pages>=6 && hasInv('证据文件') },
+            { label:'……', goto:'ending_warm', condition:()=>state.pages>=4 && state.shenWarm>=2 },
+            { label:'……', goto:'ending_soft', condition:()=>hasInv('吞云灯谱·卷下') || getFlag('grandmaOk') },
+            { label:'……', goto:'ending_bad', default:true },
+        ]);
+
+    /* ——— 结局们 ——— */
+    S('ending_perfect','🌟',
+        `🔥 <strong>咔哒。</strong>
+
+灯芯燃起。
+不是橙黄，是<strong>淡金色</strong>。
+
+火焰一跳，整盏「吞云」活了。七层绢上的龙仿佛挣脱束缚，在绢面上游动、翻身、探爪——
+
+光影投在桥拱石壁上。
+紧接着，河岸六盏子灯应声而亮。
+北斗形的光链沿河铺开，枕水镇醒了。
+
+老人推开窗户。小孩跑出巷子。
+外婆站在豆腐坊门口，围裙上还有面粉，仰头看你。
+
+沈爷爷在桥下阴影里站得笔直。你不知道他有没有哭。
+但你把卷上和卷下合在一起，用红绳系好，塞回他手里时——
+他把你脑袋狠狠按了一下。很用力。
+
+"明年。"他说，"教你画龙睛。"
+
+> 🏆 <strong>★完美结局：吞云归来</strong>
+> 灯巷保住了。合同作废。贾六转行送外卖（据说偶尔会给沈爷爷送豆浆）。
+> 你是这一代的守灯人。`,
+        [
+            { label:'🔁 再玩一次（试试别的造灯方式）', goto:'start' }
+        ]);
+
+    S('ending_warm','⭐',
+        `灯亮了。
+
+火焰是温暖的橙红色。龙须画得不算完美，灯骨也有点歪，但在黑夜里，它足够亮。
+
+河岸的子灯亮了五盏半。
+茶阿婆端着熏豆茶站在河边，喊你的名字。
+沈爷爷没说话，只是把你的歪龙面特意转过来，对着大街。
+
+"让人看见你干的也好。"他背对着你，"提醒他们灯不是机器做的。"
+
+外婆给你盛了一大碗豆腐圆子，热气腾腾。
+
+> 🏆 <strong>⭐暖结局：北斗歪了但也亮了</strong>
+> 灯谱回来了。灯会继续办。虽然沈爷爷还是嘴硬，
+> 但你知道，明年他会教你调真正的金粉。`,
+        [
+            { label:'🔁 再玩一次', goto:'start' }
+        ]);
+
+    S('ending_soft','✨',
+        `灯……没亮。
+
+不是灯的问题。是你手抖了——打火机掉在桥板上，滚下去了。
+
+沈爷爷坐在桥下，看着空空的灯座。
+外婆走上桥，把一碗热豆腐脑递给你。
+
+"吃。"她没看灯，"吃了脑子才想得起来。"
+
+她从围裙兜里掏出一样东西——<strong>那本蓝布册子的最后一页</strong>，之前被她垫豆腐筐底了。
+
+"我以为没用了。"她塞给沈爷爷，"现在看，还是有用。"
+
+沈爷爷看着那页纸，看了很久。
+他把灯从钩上摘下来，用蓝布盖好。
+
+"……明年。"他说，"明年一定。"
+
+> 🏆 <strong>✨豆腐脑结局：温柔的补救</strong>
+> 灯没亮，但人心亮了。
+> 故事没有结束，只是暂停了。`,
+        [
+            { label:'🔁 再玩一次', goto:'start' }
+        ]);
+
+    S('ending_bad','💀',
+        `你试着点火。
+
+风很大。火苗忽明忽暗，最后还是熄了。
+
+贾六早就走了。河岸对面，那些塑料LED灯笼亮得刺眼，闪着"Welcome to Zhenshui Town"。
+
+沈爷爷关了灯坊的门。
+巨大的铜锁挂上，红绳在风里飘。
+
+你坐在桥栏上，脚荡着。
+小黄把鼻子拱进你手心。
+
+外婆在远处喊你回家吃饭。
+日子还要过。
+
+你摸了摸兜里那片蓝布碎片——
+它已经不再发光了。
+
+> 💀 <strong>灯巷熄了。</strong>
+> 也许明年，也许下辈子。
+> 吞云不会再回来了。`,
+        [
+            { label:'🔁 再试一次（这次一定要保护好册子！）', goto:'start' }
+        ]);
+
+    /* ==========================================================
+       ★ 渲染引擎（无需改动）
+       ========================================================== */
+    let currentId = 'start';
+    let isTyping = false;
+
+    function $(id){ return document.getElementById(id); }
+
+    function renderScene(id){
+        const sc = SCENES[id];
+        if(!sc) return;
+        currentId = id;
+
+        $('choices').innerHTML = '';
+        document.querySelectorAll('.choice-btn').forEach(b=>b.classList.add('disabled'));
+        $('choices').style.opacity = '0';
+        setTimeout(()=>{
+            $('choices').innerHTML = '';
+            $('choices').style.opacity = '1';
+        }, 250);
+
+        $('scene-icon').textContent = sc.icon;
+
+        // 打字机效果
+        let i = 0, txt = sc.text;
+        $('scene-text').innerHTML = '';
+        isTyping = true;
+
+        const cursor = '<span class="cursor"></span>';
+        $('scene-text').innerHTML = cursor;
+
+        const timer = setInterval(()=>{
+            if(i<txt.length){
+                $('scene-text').innerHTML = txt.slice(0,i+1) + cursor;
+                i++;
+            } else {
+                clearInterval(timer);
+                isTyping = false;
+                $('scene-text').innerHTML = txt;
+                renderChoices(sc.choices);
+            }
+        }, 32);
+
+        updateStatus();
+    }
+
+    function renderChoices(choices){
+        const cEl = $('choices');
+        cEl.innerHTML = '';
+
+        // 过滤条件选项
+        const valid = choices.filter(ch => {
+            if(ch.condition) return ch.condition();
+            if(ch.default) return true;
+            return true;
+        });
+
+        valid.forEach((ch,i)=>{
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerHTML = `<span class="badge">${String.fromCharCode(9312+i)}</span>${ch.label}<span class="arr">›</span>`;
+            btn.onclick = () => {
+                if(isTyping) return;
+                if(ch.action) ch.action();
+                renderScene(ch.goto);
+            };
+            cEl.appendChild(btn);
+        });
+    }
+
+    // 初始化
+    renderScene('start');
+    updateStatus();
+</script>
+</body>
+</html>

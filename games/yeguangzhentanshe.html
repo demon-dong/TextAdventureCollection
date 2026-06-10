@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>夜光侦探社 · 午夜来电</title>
+<style>
+  /* ====== 全局 ====== */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0b0e1a;
+    color: #d8deee;
+    font-family: "PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    min-height: 100vh;
+    /* PC宽屏宽松 / 手机端不让贴边 */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 24px 16px 60px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (max-width:420px) {
+    body { padding: 12px 8px 48px; }
+  }
+
+  #game {
+    width: 100%;
+    max-width: 640px;
+    background: linear-gradient(170deg,#121828 0%,#0e1220 100%);
+    border: 1px solid #1f2744;
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(100,140,255,.08);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ====== 顶部标题栏 ====== */
+  #header {
+    background: linear-gradient(90deg,#161d36,#111729);
+    border-bottom:1px solid #1f2744;
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  #header .badge {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg,#4f6ef7,#8b5cf6);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0;
+  }
+  #header .title {
+    font-size: 15px; font-weight: 600; color: #a5b4fc; letter-spacing:.5px;
+  }
+  #header .subtitle { font-size:11px; color:#555e80; margin-top:1px; }
+
+  /* ====== 场景画面 ====== */
+  #scene-area {
+    padding: 22px 20px 10px;
+    min-height: 220px;
+  }
+  @media (max-width:420px) {
+    #scene-area { padding: 18px 14px 8px; min-height:180px; }
+  }
+
+  /* 场景图标/插图占位 */
+  .scene-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 12px rgba(130,160,255,.25));
+  }
+
+  #scene-text {
+    font-size: 15.5px;
+    line-height: 1.85;
+    color: #c5cce0;
+    letter-spacing: .2px;
+    white-space: pre-line;
+    min-height: 60px;
+    word-break: break-word;
+  }
+  /* 打字机光标 */
+  #scene-text .cursor {
+    display: inline-block;
+    width: 8px; height: 16px;
+    background: #6b7fdc;
+    margin-left: 2px;
+    animation: blink .7s steps(1) infinite;
+    vertical-align: text-bottom;
+  }
+  @keyframes blink { 50%{opacity:0} }
+
+  /* 分隔线 */
+  .divider {
+    border: none; border-top: 1px solid #1a2040;
+    margin: 14px 0 6px;
+  }
+
+  /* ====== 选项区 ====== */
+  #choices {
+    padding: 6px 20px 22px;
+    display: flex;
+    flex-direction: column;
+    /* gap 做首选，fallback 靠下面 .choice-btn+.choice-btn 的 margin-top */
+    gap: 10px;
+  }
+  @media (max-width:420px) {
+    #choices { padding: 6px 14px 20px; gap: 9px; }
+  }
+
+  .choice-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: linear-gradient(135deg,#161d35 0%,#131929 100%);
+    border: 1px solid #252f50;
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: #c3ccff;
+    font-size: 14.5px;
+    line-height: 1.55;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .18s, border-color .18s, transform .18s, box-shadow .18s;
+    position: relative;
+    user-select: none;
+  }
+  @media (max-width:420px) {
+    .choice-btn { padding: 13px 14px; font-size: 14px; border-radius: 10px; }
+  }
+  /* === 兼容旧手机：flex column gap 不生效时，相邻兄弟补一刀 === */
+  .choice-btn + .choice-btn {
+    margin-top: 10px;
+  }
+  @supports (gap:1px) {
+    /* 现代浏览器：gap 已生效，避免 margin-top 叠加间距 */
+    .choice-btn + .choice-btn {
+      margin-top: 0;
+    }
+  }
+
+  .choice-btn:active {
+    transform: translateX(2px) scale(.985);
+    background: linear-gradient(135deg,#1b2750,#151d3a);
+    border-color: #4f6ef7;
+  }
+  @media (hover:hover) and (pointer:fine) {
+    .choice-btn:hover {
+      background: linear-gradient(135deg,#1b2545,#161d38);
+      border-color: #4f6ef7;
+      color: #e0e6ff;
+      box-shadow: 0 0 16px rgba(80,110,255,.1);
+      transform: translateX(3px);
+    }
+    .choice-btn:active { transform: translateX(3px) scale(.985); }
+  }
+  .choice-btn:active { transform: translateX(3px) scale(.985); }
+  .choice-btn .arrow { position:absolute; right:16px; top:50%; transform:translateY(-50%); opacity:.3; font-size:13px; }
+
+  /* 状态栏 */
+  #statusbar {
+    display: flex; gap: 14px;
+    padding: 10px 20px 14px;
+    font-size: 11.5px; color: #3e4a70;
+    border-top:1px solid #141b32;
+    flex-wrap: wrap;
+  }
+  @media (max-width:420px) {
+    #statusbar { padding: 8px 14px 12px; gap:10px; font-size:11px; }
+  }
+
+  /* 失败闪烁 */
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-6px)}
+    40%{transform:translateX(6px)}
+    60%{transform:translateX(-4px)}
+    80%{transform:translateX(4px)}
+  }
+  .shake { animation: shake .35s ease; }
+
+  /* ====== 密码锁弹窗 ====== */
+  #puzzle-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    background: rgba(6,8,18,.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  #puzzle-overlay.show {
+    display: flex;
+  }
+
+  .puzzle-box {
+    width: 100%;
+    max-width: 500px;
+    background: linear-gradient(170deg, #141b32, #101625);
+    border: 1px solid #2b3570;
+    border-radius: 14px;
+    padding: 24px 20px;
+    box-shadow: 0 0 40px rgba(80,110,255,.15);
+  }
+
+  .puzzle-box h3 {
+    font-size: 18px;
+    color: #a5b4fc;
+    margin-bottom: 8px;
+    text-align: center;
+    letter-spacing: .5px;
+  }
+
+  .puzzle-clue {
+    font-size: 14.5px;
+    line-height: 1.9;
+    color: #bec8f0;
+    margin: 16px 0;
+    background: #0d1122;
+    border: 1px solid #1e274a;
+    border-radius: 10px;
+    padding: 16px;
+    white-space: pre-line;
+  }
+
+  .puzzle-clue em {
+    color: #f0c060;
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  .input-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .digit-inp {
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    background: #0d1122;
+    border: 2px solid #2b3570;
+    border-radius: 10px;
+    color: #e0e6ff;
+    font-size: 28px;
+    font-family: inherit;
+    font-weight: 600;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .digit-inp::-webkit-inner-spin-button,
+  .digit-inp::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+  .digit-inp:focus {
+    border-color: #7b8cf7;
+    box-shadow: 0 0 0 3px rgba(100,130,255,.2);
+  }
+  .digit-inp.err {
+    border-color: #f07070;
+    box-shadow: 0 0 0 3px rgba(240,80,80,.2);
+  }
+
+  .puzzle-msg {
+    font-size: 13px;
+    min-height: 22px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .puzzle-msg.ok { color: #6fcf97; }
+  .puzzle-msg.fail { color: #f09090; }
+
+  .puzzle-btns {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn-go, .btn-hint {
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: 1px solid #2b3570;
+    font-size: 15px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .2s;
+  }
+  .btn-go {
+    background: linear-gradient(135deg,#4f6ef7,#6c5ce7);
+    color: #fff;
+    border-color: #5b6eea;
+  }
+  .btn-go:active { transform: scale(.97); }
+  .btn-hint {
+    background: transparent;
+    color: #8e9af0;
+    border-color: #2b3570;
+  }
+  .btn-hint:active { transform: scale(.97); }
+
+  @media (max-width:420px) {
+    .puzzle-box { padding: 18px 14px; }
+    .digit-inp { width: 52px; height: 52px; font-size: 24px; }
+    .input-row { gap: 10px; }
+    .btn-go, .btn-hint { padding: 10px 18px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game">
+  <!-- 顶部 -->
+  <div id="header">
+    <div class="badge">🔦</div>
+    <div>
+      <div class="title">夜光侦探社</div>
+      <div class="subtitle">◆ 第一案：消失的脚印 · 超自然事件</div>
+    </div>
+  </div>
+
+  <!-- 场景文字 -->
+  <div id="scene-area">
+    <div class="scene-icon" id="scene-icon"></div>
+    <div id="scene-text"></div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 选项 -->
+  <div id="choices"></div>
+
+  <!-- 底部状态 -->
+  <div id="statusbar">
+    <span>🕒 <b id="st-time">21:47</b></span>
+    <span>🎒 道具：<b id="st-inv">无</b></span>
+    <span>❤️ 胆量：<b id="st-hp">满</b></span>
+    <a href="../index.html" style="color:#e8c87a;font-size:13px;opacity:.7;text-decoration:none">← 返回合集</a>
+  </div>
+
+  <!-- ★ 密码锁弹窗 -->
+  <div id="puzzle-overlay">
+    <div class="puzzle-box">
+      <h3>🔐 门扉封印 · 三位数密码锁</h3>
+      <div class="puzzle-clue" id="puzzle-clue"></div>
+      <div class="input-row">
+        <input class="digit-inp" id="p0" type="tel" maxlength="1" inputmode="numeric" placeholder="?">
+        <input class="digit-inp" id="p1" type="tel" maxlength="1" inputmode="numeric" placeholder="?">
+        <input class="digit-inp" id="p2" type="tel" maxlength="1" inputmode="numeric" placeholder="?">
+      </div>
+      <div class="puzzle-msg" id="puzzle-msg"></div>
+      <div class="puzzle-btns">
+        <button class="btn-go" id="puzzle-submit">✅ 输入密码，试着开门</button>
+        <button class="btn-hint" id="puzzle-hint">💡 提示</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ★ 所有场景数据 —— 你想改剧情就改这里，结构一目了然
+//  每个 scene = { icon, text, choices:[ {label, goto, action}, ... ] }
+//
+//  label   : 按钮上显示的文字
+//  goto    : 跳转到哪个场景ID（字符串）
+//  action  : 可选，执行副作用，如加道具 / 减HP
+//            action: (state)=>{ state.inv.push("xxx"); }
+//
+//  特殊 goto:
+//    "__GAME_OVER__"  → 触发失败画面（可配消息）
+//    "__WIN__"        → 触发通关画面
+// ============================================================
+
+const SCENES = {};
+
+function S(id, icon, text, choices) {
+  SCENES[id] = { icon, text, choices };
+}
+
+/* =============================================
+   场景数据
+   ============================================= */
+
+S("start",
+  "☎️",
+  `晚上 21:47，你刚刷完牙准备上床。\n\n茶几上的座机突然响了──叮铃铃──那部老式手机的铃声大得离谱。来电显示只有五个字：\n\n「隔壁·于奶奶」\n\n你接起来，对面声音发颤：\n\n"小夜光……你快来一趟。我家猫『影子』刚才追什么东西跑出去了……脚印是……是淡蓝色发光的，走到三楼楼道尽头那堵墙——就直接穿过去了……我在猫眼后面瞄见，有个灰风衣的人站在那堵墙前面，像在等谁……"\n\n她压低声音：\n"孩子，你上次要我打电话给你『有意思的超自然事件』──这算不算？"\n\n你心脏咚地跳了一下。`,
+  [
+    { label: "🔦 抓起手电筒就出门", goto: "stairs" },
+    { label: "📞 先问清楚墙的具体位置和灰风衣长相", goto: "ask_detail" },
+    { label: "🛏️ 假装信号断线，缩回被窝（……开玩笑的）", goto: "__GO_HOME__" },
+  ]
+);
+
+S("ask_detail",
+  "👵",
+  `你把手机音量调小，压低声音问：\n\n"于奶奶，那堵墙在三楼左手边第四户和第五户之间对吧？消防栓旁边？"\n\n"对对对！就是那面从来没开过门的墙！平时我晾拖把都不靠那边──总感觉那面墙后面的空气……凉得不自然。"\n\n"灰风衣的人呢？高了矮了？男的女的？"\n\n"看不清脸。就……整个人像『信号不好』一样边缘发虚。他低头看了眼手表，那表盘居然是倒着走的──然后他抬头，刚好看向猫眼──"\n\n于奶奶吸了口气。\n\n"我赶紧蹲下了。小夜光你快过来！！"\n\n你挂了电话，把侦探徽章别在卫衣胸口，抓了手电筒。`,
+  [
+    { label: "🔦 出门，上三楼", goto: "stairs" },
+  ]
+);
+
+S("stairs",
+  "🏢",
+  `楼道声控灯坏了一盏，楼梯间忽明忽暗。你一步步上到三楼，手电筒光柱在水泥墙上扫来扫去。\n\n果然──三楼左手边，消防栓和电表箱之间，那面灰扑扑的白墙根底下，有一串……\n\n淡蓝色的、半透明的、像踩在磷光水里一样的猫爪印。\n\n爪印走到墙根，向前一步──就没了。连个门缝都没有。就一面实心的、冰凉的墙。\n\n你伸手摸上去。指尖碰到墙面时──不是水泥的触感。更像……一层极薄的、绷紧的薄膜。表面漾起一圈涟漪，像往水面上按了一个指肚。`,
+  [
+    { label: "👋 用力一推，把手伸进去试试", goto: "push_wall" },
+    { label: "📝 先退后三步，用手电筒仔细照墙根/踢脚线找规律", goto: "inspect_wall" },
+    { label: "🏃 跑回一楼敲于奶奶的门把她带上一起看", goto: "get_grandma" },
+  ]
+);
+
+S("inspect_wall",
+  "🔍",
+  `你退后，手电筒横扫墙面──\n\n光柱掠过消防栓旁边的墙角线时，你注意到了：墙根踢脚线上刻着一个几乎看不清的符号，像一只猫蜷成一团的简笔画，中间嵌着一个小太阳。\n\n手电光一照，那只猫的眼睛位置──微微反光。你蹲下去抠了抠──是一粒嵌在灰泥里的淡蓝色碎晶，还会微微震动，像心跳从墙那头传来。\n\n你把碎晶捏起来，指尖一阵酥麻。\n\n就在这时，墙上的涟漪自己荡开一圈更大的波纹……一个拱形轮廓慢慢浮现，像一扇门从雾里凝结出来。门把手是冷的──冷得不像这个季节。`,
+  [
+    { label:"🚪 握住把手，试着转动──", goto:"__door_puzzle__", action:(st)=>{ if(!st.inv.includes("碎晶")) st.inv.push("碎晶") } },
+  ]
+);
+
+S("push_wall",
+  "🌊",
+  `你手指往前一送──膜面像水面一样吞进整只手。凉意顺手臂窜到肩膀，你差点叫出声但咬住嘴唇。\n\n手臂抽回时，手腕沾了一层淡蓝荧光粉，正沿血管形状慢慢爬──像印记在生成。\n\n你盯着那面墙看了三秒。然后两只手一起按上去，重心前压──\n\n■ 整个人穿了过去。\n\n重力短暂消失了一瞬。你踉跄落地──`,
+  [
+    { label: "环顾四周", goto: "behind_wall" },
+  ]
+);
+
+S("get_grandma",
+  "🚪",
+  `你咚咚敲于奶奶的门。好一会儿，门链哗啦一响，她探出半张脸，围巾裹到下巴，手里攥着把菜刀（……有备而来）。\n\n"带上了。"她把刀往身后藏了藏。\n\n你俩一起上三楼。可──爪印还在，那面墙却是普通水泥墙了。手电筒照墙角，猫蜷符号被新鲜灰漆盖住了。\n\n于奶奶沉默好久："……他抹了入口。知道你注意到他了。"\n\n她拍你脑袋："小侦探。线索没丢──那粒碎晶在你袖口沾着呢。"\n\n你低头──袖口一点淡蓝光正呼吸般明灭。\n> 获得道具：【碎晶】`,
+  [
+    { label: "📖 用碎晶当引子，凭记忆画猫蜷太阳符号，重新打开入口", goto: "enter_door_success", action:(st)=>{if(!st.inv.includes("碎晶"))st.inv.push("碎晶")} },
+  ]
+);
+
+S("enter_door",
+  "🌀",
+  `你站在一个……不该存在的空间里。\n\n一条窄巷，两侧是高耸的维多利亚式排屋，但所有窗子都被钉死了，窗帘后面没有灯光──只有一种缓慢脉动的淡紫色荧光从砖缝里渗出来。\n\n空气闻起来像下雨前的臭氧。\n\n巷子尽头立着一盏孤零零的路灯，灯杆上钉着一块铁牌，锈迹斑斑，上面只刻了三个字：\n\n■「停 · 选 · 付」\n\n脚下你看到了影子──猫爪印延续到这里，拐进了巷子深处。但除了爪印，还多了另一种痕迹：\n\n■ 过大的人类鞋印。灰风衣男人走过的地方，地面灰粉留下了鞋底纹路──但鞋印的脚趾部分是……反的。这人走路时脚尖朝后。`,
+  [
+    { label: "🦊 沿猫爪印跟踪，轻手轻脚跟到巷子深处", goto: "follow_paw" },
+    { label: "🏮 先去那盏路灯底下读铁牌背面/周围线索", goto: "check_lamp" },
+  ]
+);
+
+S("enter_door_success",
+  "🌀",
+  `碎晶在袖口亮了一下──你蘸了点荧光粉，凭记忆在墙上画那个猫蜷太阳符号。\n\n圈还没闭合，灰漆就像皮肤一样自行褪开，露出底下波纹膜面。\n\n你深吸气，推门进去──\n\n一条窄巷。维多利亚排屋。钉死的窗。臭氧味的空气。铁牌「停·选·付」。猫爪印往深处去。`,
+  [
+    { label: "🦊 跟踪爪印", goto: "follow_paw" },
+    { label: "🏮 先查路灯铁牌", goto: "check_lamp" },
+  ]
+);
+
+S("behind_wall",
+  "🌀",
+  `你站在一个……不该存在的空间里。\n\n一条窄巷，两侧高耸的维多利亚式排屋，窗子全钉死，只渗出脉动的淡紫荧光。空气闻起来像下雨前的臭氧。\n\n巷子尽头一盏孤灯，铁牌刻着：■「停 · 选 · 付」。\n\n猫爪印拐进深处，旁边混着灰风衣人的鞋印──脚趾朝后。`,
+  [
+    { label: "🦊 沿猫爪印跟踪进去", goto: "follow_paw" },
+    { label: "🏮 先去路灯底下查铁牌和周围线索", goto: "check_lamp" },
+    { label: "📱 掏手机想拍照──但信号条显示『不在服务区』", goto: "no_signal", action:(st)=>{st.hp--;} },
+  ]
+);
+
+S("no_signal",
+  "📵",
+  `屏幕左上角『无服务』闪了一下，连电量图标都淡了──手机屏幕本身开始透出和你袖口碎晶一样的淡蓝光。\n\n一行字浮现在黑屏上，像有人用像素写着：\n> 「别 · 照 · 亮 · 自 · 己」\n\n屏幕啪地灭了。按电源键没反应。\n\n你心里咯噔──但反而更兴奋了。这地方不认你的手机，等于盖章认证：■ 这里是超自然管辖区。\n\n手机塞回裤兜。现在你只能用眼睛了。`,
+  [
+    { label: "🦊 不管了，跟爪印走", goto: "follow_paw" },
+    { label: "🏮 先去路灯底下", goto: "check_lamp" },
+  ]
+);
+
+S("check_lamp",
+  "🏮",
+  `铁牌背面刻着密密麻麻小字，像旧铜版蚀刻：\n\n> 『此巷不归属任一地址系统。\n>  进入者须做一选择：\n>  ■ 停──转身，踏出三步即回三楼楼道，但碎晶化灰，猫脚印永远消失。\n>  ■ 选──往前走，承认你看见了不该看见的，此后你将被记录在册。\n>  ■ 付──走到底，取回影子，代价由「主人」开价，你可能付不起。』\n\n铁牌下方焊着生锈小铁盒，没锁。盒盖半开，里面一张折叠纸条：\n\n> "嘿。选了『先看牌子』而不是莽进去，加一分。——灰先生留。\n>  PS：铁盒夹层里有东西。敲三下。"\n\n你照做。夹层弹开──一根银色发光的猫毛 + 一小截灰色风衣布料。`,
+  [
+    { label: "🦊 收好证据，现在跟爪印走", goto: "follow_paw", action:(st)=>{ if(!st.inv.includes("猫毛")) st.inv.push("猫毛+布料"); }},
+  ]
+);
+
+S("follow_paw",
+  "🐾",
+  `爪印带到巷子尽头──本该是死胡同，却有一扇■极窄的铁栅门，间隙刚好侧身挤过。\n\n栅门没锁，一推就吱嘎开了。\n\n门后是往下旋的螺旋铁梯，阶上沾满淡蓝荧光砂。深处有两种声音叠在一起：\n\n1️⃣ 断断续续的猫叫声（影子？）\n2️⃣ 叩。叩。叩。──不急不缓，像在数秒等谁。\n\n灰风衣的「主人」，就在底下。`,
+  [
+    { label: "🤫 脱鞋拎手里，猫一样无声下楼", goto: "confront_quiet" },
+    { label: "💡 开手电筒直射下去，先抢视野优势", goto: "confront_light" },
+    { label: "📦 躲在栅门边，从栅栏缝扔碎晶下去当『回声诱饵』听反应", goto: "echo_bait" },
+  ]
+);
+
+S("confront_quiet",
+  "🤫",
+  `你赤脚踩冰凉铁阶，一步一静。\n\n旋梯底展开成穹顶地下室，大十倍：天花板悬着几百只玻璃罐，每只封存着一小团有颜色的光──淡金、玫红、雾蓝──像被抽出来的梦的碎片。\n\n正中央，灰风衣男人背对你，身形边缘发虚。他面前铸铁台上放着一个巴掌大的发光球──里面映着一双缩成缝的猫眼。\n\n■ 影子就被关在那球里。\n\n他没回头，但开口了──声音像收音机调频间的静电：\n\n"……脚步声计数到第七阶我就知道你不是于婆婆。她这辈子阶梯上从来不脱鞋。"\n\n他缓缓侧过半张脸──下半张脸很年轻，嘴唇白得像旧纸。\n\n"夜光探员。坐下谈，还是抢？你选。"`,
+  [
+    { label: "🗣️ 『你先把影子放了。我没带武器。』（谈判）", goto: "negotiate" },
+    { label: "⚡ 不废话，从侧面铁架翻过去抄台抢球", goto: "rush_ball", action:(st)=>{st.hp--;} },
+  ]
+);
+
+S("confront_light",
+  "💡",
+  `你啪地开手电──光柱刺下去瞬间，几百只罐子■同时嗡了一声，里面的彩光剧烈震荡！\n\n灰风衣猛抬头──你看清了：他的影子投在墙上，■影子的头和人的头方向相反。\n\n"……刺眼。"声音像金属摩擦，"小夜光，你知不知道那些罐子里的东西被光照会怎样？"\n\n他抬手挡光──袖口滑落，手腕内侧皮肤下有密密麻麻的细小文字在蠕动，像活体纹身。\n\n手电筒在你手里开始■发热──碎晶在警告：强光在这里是攻击行为。\n> 胆量-1`,
+  [
+    { label: "🗣️ 立刻把光调最低档/蒙上袖子当柔光（示好）", goto: "negotiate" },
+    { label: "📸 趁他挡眼把光甩向架子，砸罐制造混乱然后抢球", goto: "smash_distract" },
+  ]
+);
+
+S("echo_bait",
+  "💎",
+  `你把碎晶从栅栏缝滚下去──\n\n碰到台阶──叮──一声清亮共鸣像敲水晶杯。\n\n灰风衣动作停了半拍。"……引开我？合格的小侦探手法。但方向错了。"\n\n碎晶滚到台脚边，■亮了一下──映出球壳咒文缝隙里，影子在用爪子扒内壁……方向朝着你。\n\n它在帮你。\n\n灰先生叹气，抬头直朝你藏身方向看──虽然不可能看到你──\n\n"下来吧。梯子第三阶松了，别踩。我等的人迟到二十年了……你算个意外。"`,
+  [
+    { label: "🪜 收起藏匿，正常走下去（留神第三阶）", goto: "confront_quiet" },
+    { label: "🪂 用外套绑栅门杠当简易绳滑下去抄近道", goto: "rush_ball", action:(st)=>{st.hp--;} },
+  ]
+);
+
+S("negotiate",
+  "🕊️",
+  `你说："我不是来打架的。于奶奶的猫你放了，我带你出去也行──但你得先证明没对影子掺灰。"\n\n灰先生沉默很久。然后做了件你没预想的──\n\n他把球从台上拿起来，■轻轻放在你和台之间的地面上，退两步，双手插风衣口袋。\n\n球壳咒文一层层自行剥落──噗──\n\n一团黑烟爆开──下一秒，一只瘦黑猫稳稳落在你鞋面上，爪子收着没挠，抬头看你，瞳孔里映着你的脸。\n\n然后它转头，弓背冲灰先生哈气。\n\n灰先生举手──指了下穹顶最高处那只■没封死、微微开盖的空罐。"那里面是我的。不是猫的。你不用管。"\n\n他最后看你一眼：\n"下次再来，带点■热的──热可可，不是奶茶。这里温差对你这年纪不太好。"\n\n他往后一步──整个人像信号丢失，从边缘像素化消融──只剩风衣落地成灰。\n\n🎉 ■■■ 第一案·结案 ■■■\n\n你抱影子走上旋梯。走到第三阶你想起他的话──低头：踏板确实有条疲劳裂纹。你踩旁边钢梁过去了。\n\n铁栅门外楼道灯刚好亮了──声控的。\n\n于奶奶在楼梯口举着菜刀，看见你和猫，长出口气："……可可？奶茶？"\n你："……热可可。"\n她刀哐啷放回鞋柜，搓你头发："行，成交。"`,
+  [
+    { label: "🔁 再玩一次", goto: "start" },
+  ]
+);
+
+S("rush_ball",
+  "⚡",
+  `你猛冲──但旋梯第三阶果然松了，咔！铁片翘起，脚踝一崴，手肘撑地接住自己，铁锈味进鼻子。\n\n球在台上震了一下──灰先生身形瞬间凝实半秒，你终于看清全脸：\n\n■ 他没有眼睛。眼眶里是两小团缓慢旋转的灰雾。\n\n"……莽撞。"他语气竟不是怒，是遗憾，"我本来想好好请客的。"\n\n抬两根手指──穹顶所有罐子同时啪暗──眼前一黑……\n\n……再睁眼时你躺在三楼消防栓旁边，脸贴凉水泥。手电筒滚一旁，电池只剩一格。\n\n影子不在怀里──但手腕上碎晶荧光画了个箭头，还亮着，指向楼下方向。\n\n■ 暂时撤退·但并非失败`,
+  [
+    { label: "🚪 深呼吸，做准备再试一次（走安静路线）", goto: "follow_paw" },
+    { label: "🏃 先回于奶奶那，把这事告诉她", goto: "tell_grandma_retreat" },
+  ]
+);
+
+S("smash_distract",
+  "💥",
+  `你猛扫架子──哗啦！！一排罐子砸碎，彩光炸了一地像液体烟花──\n\n灰先生闷哼，身形扭曲，咒文防护出裂缝──你冲上去抓手伸向球──\n\n指尖碰球壳瞬间彻骨冷炸上手臂，脑海里轰地闪过一幅画：\n小姑娘坐空屋哭，窗外灯全灭──小男孩翻窗进来，掌心托着偷来的光："别哭了。给你一半。"\n\n你手一抖。\n\n灰先生已从碎光里走出，站在你面前，半透明手掌轻轻按住你握球的手──不是抢，是扶稳。\n\n"……你看到的是我的。不是她的。"声音忽然很轻，"现在你知道了──所以更要选：把它还我，或替我保管？"`,
+  [
+    { label: "🤝 『……保管。但你不准再偷活物的梦。』", goto: "negotiate" },
+    { label: "🏃 抱球往梯口跑，边跑喊『于奶奶报警！！』", goto: "rush_ball" },
+  ]
+);
+
+S("tell_grandma_retreat",
+  "👵",
+  `你一瘸一拐敲开门。她一看脸色和袖口灰粉就明白了。\n\n没笑你也没说"别瞎想"。拉你进来，门关三道链，从围裙口袋摸出小瓶琥珀色东西──闻起来像肉桂和晒过的被子。\n\n"你外公以前也见过那面墙，"她在你崴的脚踝上抹了一层，"他管那后面叫『等光灯巷』。进去过的人得拿点■热的东西当『锚』，不然回来的时候魂容易漂半寸。"\n\n把瓶子塞你手里：\n"下次去──带可可。■真可可，不是超市糖粉冲的。灰先生……不是坏人，孩子。他只是忘了甜味道太久，把自己腌进灰里了。"\n\n腕上箭头还亮。\n> 获得关键情报：「需要热源/甜的当锚」｜胆量恢复 ❤️满`,
+  [
+    { label: "🍫 去厨房煮真热可可（于奶奶配方），带下去当筹码/锚", goto: "follow_paw_with_cocoa" },
+  ]
+);
+
+S("follow_paw_with_cocoa",
+  "☕",
+  `这趟你有准备。\n\n热可可蒸汽在铁梯上凝成金色水珠，碎晶箭头一路引到地下室。穹顶罐子感受到热和甜，嗡鸣降了半度──不那么敌对。\n\n灰先生这次在你到最后一旋就现身，但姿态变了：不站台后防守，靠在台边，脚边两只不知哪变来的空马克杯。\n\n"……我赌你会带对的。"他接过杯子，指节碰瓷壁时不再像信号不良──更接近正常人拿东西。\n\n他没喝，但把球轻轻推过台面到你这边。球壳自动开了。影子蹦出来，抖毛，跳你肩头舔你耳朵。\n\n他低头看杯里倒影，极轻一句："……谢谢。"\n\n🎉🎉 ■■ 真·通关结局：灰先生记得甜了 ■■\n\n你抱猫上楼梯回头──铁栅门关上前，穹顶最高处那只空罐里，不知什么时候■亮了一小团暖金色光，安安静静，不晃。`,
+  [
+    { label: "🔁 再玩一次", goto: "start" },
+  ]
+);
+
+/* ---------- 特殊结局 ---------- */
+SCENES["__GO_HOME__"] = {
+  icon: "🛏️",
+  text: `你果断挂了电话蒙头装死。\n\n五分钟后枕头底下手机自己亮了：\n> 🔦 夜光探员，你在躲什么？\n> 🔦 猫脚印不会等天亮。\n> 🔦 于奶奶的猫门铃响了……\n\n（玩笑结束 😏  刷新页面从正经 start 开始～）`,
+  choices: [
+    { label: "😤 行吧，抓起手电筒出门！", goto: "stairs" }
+  ]
+};
+
+/* ============================================================
+   引擎部分 —— 一般不用动，除非你想改样式/速度
+   ============================================================ */
+const state = { inv: [], hp: 3 };
+const $icon    = document.getElementById("scene-icon");
+const $text    = document.getElementById("scene-text");
+const $choices = document.getElementById("choices");
+const $inv     = document.getElementById("st-inv");
+const $hp      = document.getElementById("st-hp");
+const $overlay = document.getElementById("puzzle-overlay");
+const $clue    = document.getElementById("puzzle-clue");
+const $msg     = document.getElementById("puzzle-msg");
+const $p0 = document.getElementById("p0");
+const $p1 = document.getElementById("p1");
+const $p2 = document.getElementById("p2");
+
+const PUZZLE_ANSWER = [2, 4, 2]; // 密码：242
+
+// 显示密码锁
+function showPuzzle() {
+  $clue.innerHTML = 
+`门框上的符文开始发光，浮现出三行算式：
+
+第一行：3 × 9 = ？
+（取这个积 ▲十位▲ 的数字）
+
+第二行：每束有 5 颗发光籽，
+影子的爪印留下 3 束，又多 1 颗。
+（取结果的 ▲个位▲ 数字）
+
+第三行：50 减去 (8 × 6)
+（取结果的 ▲个位▲ 数字）
+
+把这三个数字按顺序连起来，就是开门密码。`;
+  
+  // 清空输入和消息
+  [$p0, $p1, $p2].forEach(inp => {
+    inp.value = "";
+    inp.classList.remove("err");
+  });
+  $msg.textContent = "";
+  $msg.className = "puzzle-msg";
+  
+  // 显示弹窗
+  $overlay.classList.add("show");
+  $p0.focus();
+}
+
+// 隐藏密码锁
+function hidePuzzle() {
+  $overlay.classList.remove("show");
+}
+
+// 检查密码
+function checkPassword() {
+  const digits = [$p0.value.trim(), $p1.value.trim(), $p2.value.trim()];
+  let allFilled = true;
+  
+  [$p0, $p1, $p2].forEach((inp, i) => {
+    if (digits[i] === "") {
+      inp.classList.add("err");
+      allFilled = false;
+    } else {
+      inp.classList.remove("err");
+    }
+  });
+  
+  if (!allFilled) {
+    $msg.className = "puzzle-msg fail";
+    $msg.textContent = "请填完三个数字哦～";
+    return;
+  }
+  
+  const entered = digits.map(d => parseInt(d, 10));
+  const correct = entered[0] === PUZZLE_ANSWER[0] && 
+                  entered[1] === PUZZLE_ANSWER[1] && 
+                  entered[2] === PUZZLE_ANSWER[2];
+  
+  if (correct) {
+    $msg.className = "puzzle-msg ok";
+    $msg.textContent = "咔哒……门锁开了！";
+    setTimeout(() => {
+      hidePuzzle();
+      render("enter_door");
+    }, 800);
+  } else {
+    $msg.className = "puzzle-msg fail";
+    $msg.textContent = "密码不对，门纹丝不动……再试试？";
+    [$p0, $p1, $p2].forEach(inp => inp.classList.add("err"));
+  }
+}
+
+// 显示提示
+function showHint() {
+  $msg.className = "puzzle-msg ok";
+  $msg.textContent = "提示：第一行 3×9=27，十位是2；第二行 5×3+1=16，个位是6；第三行 50-48=2，个位是2。等等……第二行好像写错了？再仔细看看第二行哦～";
+}
+
+// 绑定按钮事件
+document.getElementById("puzzle-submit").onclick = checkPassword;
+document.getElementById("puzzle-hint").onclick = showHint;
+
+// 允许按 Enter 键切换输入框
+[$p0, $p1, $p2].forEach((inp, i) => {
+  inp.addEventListener("input", function(e) {
+    this.value = this.value.replace(/[^0-9]/g, "");
+    if (this.value.length === 1 && i < 2) {
+      [null, $p1, $p2][i+1].focus();
+    }
+  });
+  inp.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      if (i === 2) {
+        checkPassword();
+      } else {
+        [null, $p1, $p2][i+1].focus();
+      }
+    }
+  });
+});
+
+let currentId = null;
+const TYPE_DELAY = 20; // ms per char — 越小越快
+
+function render(id) {
+  currentId = id;
+  
+  // 特殊处理：密码锁
+  if (id === "__door_puzzle__") {
+    showPuzzle();
+    return;
+  }
+
+  // 特殊终点
+  if (id === "__GAME_OVER__") { renderSpecial("💀","案件关闭·失败","灰先生的灰雾吞掉了入口。\n\n> 刷新页面重试。"); return; }
+
+  const scene = SCENES[id];
+  if (!scene) { $text.textContent = `[场景 ${id} 未定义]`; return; }
+
+  // 更新状态栏
+  $inv.textContent = state.inv.length ? state.inv.join("、") : "无";
+  $hp.textContent  = state.hp <=0 ? "不足⚠️" : (state.hp >=3 ? "满" : `${state.hp}/3`);
+  if (state.hp <= 0) { state.hp = 3; } // 不至于真锁死
+
+  // 场景图标
+  $icon.textContent = scene.icon || "📖";
+
+  // 打字机效果
+  $choices.innerHTML = "";
+  const raw = scene.text;
+  $text.innerHTML = "";
+
+  let i = 0;
+  const cursor = document.createElement("span");
+  cursor.className = "cursor";
+  $text.appendChild(cursor);
+
+  function tick() {
+    if (i < raw.length) {
+      // 遇到 \n 就插入 <br>，但把光标保持在最后
+      const ch = raw[i];
+      if (ch === "\n") {
+        $text.insertBefore(document.createElement("br"), cursor);
+      } else {
+        $text.insertBefore(document.createTextNode(ch), cursor);
+      }
+      i++;
+      setTimeout(tick, TYPE_DELAY);
+    } else {
+      cursor.remove();
+      // 按钮出现时机：打字完后
+      setTimeout(() => buildButtons(scene), 140);
+    }
+  }
+  tick();
+}
+
+function buildButtons(scene) {
+  $choices.innerHTML = "";
+  scene.choices.forEach((c, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.innerHTML = `<span>${c.label}</span><span class="arrow">→</span>`;
+    btn.onclick = () => {
+      // 执行副作用
+      if (c.action) c.action(state);
+      // 跳转
+      document.getElementById("scene-area").classList.add("shake");
+      setTimeout(()=>document.getElementById("scene-area").classList.remove("shake"),400);
+      render(c.goto);
+    };
+    // stagger appear
+    btn.style.opacity = "0";
+    btn.style.transform = "translateX(-8px)";
+    $choices.appendChild(btn);
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        btn.style.transition = `all .25s ease ${idx*0.08}s`;
+        btn.style.opacity = "1";
+        btn.style.transform = "translateX(0)";
+      });
+    });
+  });
+}
+
+function renderSpecial(icon, title, body) {
+  $icon.textContent = icon;
+  $text.innerHTML = `<b>${title}</b>\n\n${body.replace(/\n/g,"<br>")}`;
+  $choices.innerHTML = "";
+  const btn = document.createElement("button");
+  btn.className = "choice-btn";
+  btn.innerHTML = `<span>🔁 刷新重来</span>`;
+  btn.onclick = ()=>{ state.inv=[]; state.hp=3; render("start"); };
+  $choices.appendChild(btn);
+}
+
+// ======= 启动 =======
+render("start");
+</script>
+</body>
+</html>
