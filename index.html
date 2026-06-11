@@ -5,41 +5,87 @@
     <title>🎮 文字冒险游戏合集</title>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <style>
+        /* ===== 基础重置 ===== */
         body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: #1a1612;
+            color: #ddd8ce;
             font-family: "PingFang SC","Microsoft YaHei",sans-serif;
-            background:#1a1612;color:#ddd8ce;margin:0;
-            min-height:100vh;
-            display:flex;flex-direction:column;align-items:center;justify-content:center;
-            padding:24px;
         }
-        h1{color:#e8c87a;margin-bottom:32px;letter-spacing:2px}
-        .card{
-            background:#241f18;border:1px solid #3a2e1e;border-radius:14px;
-            padding:18px 22px;width:280px;margin:10px auto;
-            cursor:pointer;transition:.2s;
+
+        /* ===== 核心：垂直居中偏上 ===== */
+        .container {
+            min-height: 100vh;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;   /* 从顶部开始 */
+            align-items: center !important;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            padding-top: 12vh !important;   /* 偏上 */
         }
-        .card:hover{border-color:#c08030;background:#2e271d}
-        .card h2{margin:0 0 6px;font-size:18px;color:#e8c050}
-        .card p{margin:0;font-size:13px;color:#9a8870}
-        a{text-decoration:none;color:inherit}
+
+        /* ===== 原有样式（不动） ===== */
+        h1 {
+            color: #e8c87a;
+            margin-bottom: 32px;
+            letter-spacing: 2px;
+            font-size: 26px;
+        }
+
+        .card {
+            background: #241f18;
+            border: 1px solid #3a2e1e;
+            border-radius: 14px;
+            padding: 18px 22px;
+            width: 280px;
+            margin: 10px auto;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .card:hover {
+            border-color: #c08030;
+            background: #2e271d;
+        }
+
+        .card h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            color: #e8c050;
+        }
+
+        .card p {
+            margin: 0;
+            font-size: 13px;
+            color: #9a8870;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
     </style>
 </head>
 <body>
-<h1>📚 文字冒险游戏合集</h1>
+<div class="container">
+    <h1>📚 文字冒险游戏合集</h1>
 
-<a href="games/dengyingxiang.html">
-    <div class="card">
-        <h2>🏮 灯影巷·消失的走马灯</h2>
-        <p>7-12岁 · 古镇 · 守护主题</p>
-    </div>
-</a>
+    <a href="games/yeguangzhentanshe.html">
+        <div class="card">
+            <h2>🔦 夜光侦探社</h2>
+            <p>拯救小猫</p>
+        </div>
+    </a>
 
-<a href="games/yeguangzhentanshe.html">
-    <div class="card">
-        <h2>🔦 夜光侦探社</h2>
-        <p>（你的第二个游戏）</p>
-    </div>
-</a>
-
+    <a href="games/dengyingxiang.html">
+        <div class="card">
+            <h2>🏮 灯影巷·消失的走马灯</h2>
+            <p>古镇 · 守护主题</p>
+        </div>
+    </a>
+</div>
 </body>
 </html>
